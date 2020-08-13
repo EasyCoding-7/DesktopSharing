@@ -1,5 +1,16 @@
 # DesktopSharing
 
+## 개인 Comment
+
+* DXGI이용 Window 캡처 and WASAPI이용 Audio output 캡처 후 RTSP 
+
+### Todo
+
+- [ ] 녹화기능 추가
+- [ ] 특정 윈도우 캡쳐 DWM이용해서 캡쳐가능하게 기능 추가
+
+---
+
 项目介绍
 -
 * 抓取屏幕和声卡的音视频数据，编码后进行RTSP转发, RTSP推流, RTMP推流。
