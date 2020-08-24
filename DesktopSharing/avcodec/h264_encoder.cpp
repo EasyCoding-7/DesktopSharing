@@ -14,8 +14,9 @@ bool H264Encoder::Init(AVConfig& video_config)
 	av_log_set_level(1);
 
 	AVCodec *codec = nullptr;
-	codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-	//codec = avcodec_find_encoder_by_name("h264_nvenc");
+	//codec = avcodec_find_encoder(AV_CODEC_ID_H264);			// for sw
+	//codec = avcodec_find_encoder_by_name("h264_nvenc");		// for nvenc
+	codec = avcodec_find_encoder_by_name("h264_qsv");			// for qsv
 	if (!codec) {
 		LOG("H.264 Encoder not found.\n");
 		Destroy();
@@ -34,23 +35,28 @@ bool H264Encoder::Init(AVConfig& video_config)
 	codec_contex_->time_base = { 1,  (int)av_config_.video.framerate };
 	codec_contex_->framerate = { (int)av_config_.video.framerate, 1 };
 	codec_contex_->gop_size = av_config_.video.gop;
-	codec_contex_->max_b_frames = 0;
-	codec_contex_->pix_fmt = AV_PIX_FMT_YUV420P;
+	codec_contex_->max_b_frames = 1;
+	codec_contex_->pix_fmt = AV_PIX_FMT_NV12;// AV_PIX_FMT_YUV420P;
 
 	codec_contex_->bit_rate = av_config_.video.bitrate;
 	codec_contex_->rc_min_rate = av_config_.video.bitrate;
 	codec_contex_->rc_max_rate = av_config_.video.bitrate;
 	codec_contex_->rc_buffer_size = (int)codec_contex_->bit_rate;
 
+	// optional qsv
+	codec_contex_->level = 31;
+	av_opt_set(codec_contex_->priv_data, "profile", "baseline", AV_OPT_SEARCH_CHILDREN);
+
 	codec_contex_->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 	//codec_contex_->flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
+	
 	if (codec->id == AV_CODEC_ID_H264) {
 		av_opt_set(codec_contex_->priv_data, "preset", "ultrafast", 0); //ultrafast 
 	}
 
 	av_opt_set(codec_contex_->priv_data, "tune", "zerolatency", 0);
-
+	
 	if (avcodec_open2(codec_contex_, codec, NULL) != 0) {
 		LOG("avcodec_open2() failed.\n");
 		Destroy();
@@ -102,7 +108,7 @@ AVPacketPtr H264Encoder::Encode(const uint8_t *image, uint32_t width, uint32_t h
 
 	if (yuv_frame_ == nullptr) {
 		yuv_frame_ = av_frame_alloc();
-		yuv_frame_->format = AV_PIX_FMT_YUV420P;
+		yuv_frame_->format = AV_PIX_FMT_NV12; //AV_PIX_FMT_YUV420P;		// AV_PIX_FMT_NV12 is for qsv
 		yuv_frame_->width = h264_config.width;
 		yuv_frame_->height = h264_config.height;
 		yuv_frame_->pts = 0;
